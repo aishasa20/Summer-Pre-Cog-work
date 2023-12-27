@@ -1,4 +1,5 @@
 from utils.dataloader import EEGDataset
+from models.cnn import testEEGNet, EEGNet
 
 import torch
 import torch.nn as nn
@@ -7,8 +8,6 @@ import torch.optim as optim
 
 import numpy as np
 import pandas as pd
-
-from models.dnn import DNN_power_bands  
 
 if __name__ == "__main__":
     # Set the random seed
@@ -19,13 +18,13 @@ if __name__ == "__main__":
 
     # Set the hyperparameters
     batch_size = 128
-    learning_rate = 1e-5
-    num_epochs = 100
+    learning_rate = 1e-3
+    num_epochs = 1000
 
     # Create the dataset
     dataset_path = "/media/data/PRECOG_Data/2022N400_Epoched/"
     train_subjects = ["sub-{:02d}".format(i) for i in range(1, 20) if i not in [5, 10, 15, 18]]
-    train_dataset = EEGDataset(dataset_path, subjects=train_subjects, feature_type="power_bands")
+    train_dataset = EEGDataset(dataset_path, subjects=train_subjects)
 
 
     # Create the dataloader
@@ -33,12 +32,18 @@ if __name__ == "__main__":
 
     # Create the test dataloader
     test_subjects = ["sub-{:02d}".format(i) for i in range(20, 24) if i not in [5, 10, 15, 18]]
-    test_dataset = EEGDataset(dataset_path, subjects=test_subjects, feature_type="power_bands")
+    test_dataset = EEGDataset(dataset_path, subjects=test_subjects)
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     # Create the model
-    model = DNN_power_bands().to(device)
+    model = EEGNet().to(device)
 
+    # Initialize the weights
+    def init_weights(m):
+        if type(m) == nn.Conv2d:
+            torch.nn.init.xavier_uniform_(m.weight)
+            # m.bias.data.fill_(0.01)
+    model.apply(init_weights)
 
     # Create the loss function and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -103,7 +108,7 @@ if __name__ == "__main__":
         
         # Save the model with the best validation accuracy
         if val_acc == max(val_accs):
-            torch.save(model.state_dict(), "checkpoints/power_bands_dnn.pth")
+            torch.save(model.state_dict(), "checkpoints/test_eegnet.pth")
 
 
         
